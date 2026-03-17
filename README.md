@@ -1,2 +1,2 @@
-# JPC1
-Testing how to create apps by jetpack compose
+# GoldenClock
+ایک کیپسول سائز گولڈن فلوٹنگ کلاک جو فل سکرین میں مختلف ایپ پر ٹائم دکھاتی
