@@ -8,15 +8,12 @@ import android.content.Context
 import android.content.Intent
 import android.graphics.PixelFormat
 import android.os.Build
-import android.os.Handler
 import android.os.IBinder
-import android.os.Looper
 import android.view.Gravity
 import android.view.MotionEvent
 import android.view.View
 import android.view.WindowManager
 import androidx.compose.foundation.background
-import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -26,7 +23,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.ComposeView
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -73,7 +69,7 @@ class FloatingClockService : Service(), LifecycleOwner, ViewModelStoreOwner, Sav
         }
 
         val notification = NotificationCompat.Builder(this, channelId)
-            .setContentTitle("Floating Clock is Running")
+            .setContentTitle("Golden Clock Active")
             .setSmallIcon(android.R.drawable.ic_menu_mylocation)
             .build()
 
@@ -84,7 +80,7 @@ class FloatingClockService : Service(), LifecycleOwner, ViewModelStoreOwner, Sav
         params = WindowManager.LayoutParams(
             WindowManager.LayoutParams.WRAP_CONTENT,
             WindowManager.LayoutParams.WRAP_CONTENT,
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY else WindowManager.LayoutParams.TYPE_PHONE,
+            WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY,
             WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE,
             PixelFormat.TRANSLUCENT
         ).apply {
@@ -97,7 +93,6 @@ class FloatingClockService : Service(), LifecycleOwner, ViewModelStoreOwner, Sav
             setContent {
                 var currentTime by remember { mutableStateOf(getCurrentTime()) }
 
-                // وقت اپڈیٹ کرنے کا طریقہ
                 LaunchedEffect(Unit) {
                     while(true) {
                         currentTime = getCurrentTime()
@@ -105,12 +100,11 @@ class FloatingClockService : Service(), LifecycleOwner, ViewModelStoreOwner, Sav
                     }
                 }
 
-                // کیپسول ڈیزائن اور ڈریگنگ
                 Box(
                     modifier = Modifier
                         .background(
                             brush = Brush.verticalGradient(
-                                colors = listOf(Color(0xFFFFD700), Color(0xFFB8860B)) // Golden Gradient
+                                colors = listOf(Color(0xFFFFD700), Color(0xFFB8860B))
                             ),
                             shape = RoundedCornerShape(50.dp)
                         )
@@ -126,7 +120,6 @@ class FloatingClockService : Service(), LifecycleOwner, ViewModelStoreOwner, Sav
             }
         }
 
-        // ڈریگ کرنے کی لاجک (Touch Listener)
         floatingView?.setOnTouchListener(object : View.OnTouchListener {
             private var initialX: Int = 0
             private var initialY: Int = 0
@@ -148,6 +141,13 @@ class FloatingClockService : Service(), LifecycleOwner, ViewModelStoreOwner, Sav
                         windowManager.updateViewLayout(floatingView, params)
                         return true
                     }
+                    MotionEvent.ACTION_UP -> {
+                        // اگر گھڑی اسکرین کے بالکل ٹاپ (y < 100) پر لے جائی جائے تو بند کر دیں
+                        if (params.y < 100) {
+                            stopSelf()
+                        }
+                        return true
+                    }
                 }
                 return false
             }
@@ -164,7 +164,4 @@ class FloatingClockService : Service(), LifecycleOwner, ViewModelStoreOwner, Sav
 
     override fun onDestroy() {
         super.onDestroy()
-        lifecycleRegistry.handleLifecycleEvent(Lifecycle.Event.ON_DESTROY)
-        floatingView?.let { windowManager.removeView(it) }
-    }
-}
+        lifecycle
