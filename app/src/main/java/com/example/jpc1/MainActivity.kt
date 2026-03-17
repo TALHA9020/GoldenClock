@@ -57,13 +57,24 @@ class MainActivity : ComponentActivity() {
             startService(intent)
         }
     }
+
+    @Deprecated("Deprecated in Java")
+    override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
+        super.onActivityResult(requestCode, resultCode, data)
+        if (requestCode == 1001) {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+                if (Settings.canDrawOverlays(this)) {
+                    startFloatingService()
+                }
+            }
+        }
+    }
 }
 
 @Composable
 fun MainScreen(context: Context, onStartClick: () -> Unit) {
     val prefs = context.getSharedPreferences("clock_prefs", Context.MODE_PRIVATE)
     
-    // سائز اور اوپیسٹی کی اسٹیٹ (لوکل اور پریفرنسز میں محفوظ)
     var sizeScale by remember { mutableFloatStateOf(prefs.getFloat("size_scale", 1f)) }
     var opacity by remember { mutableFloatStateOf(prefs.getFloat("opacity", 1f)) }
 
@@ -74,11 +85,14 @@ fun MainScreen(context: Context, onStartClick: () -> Unit) {
         verticalArrangement = Arrangement.Center,
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
-        Text(text = "Golden Clock Settings", style = MaterialTheme.typography.headlineMedium)
+        Text(
+            text = "Golden Floating Clock", 
+            style = MaterialTheme.typography.headlineMedium,
+            color = MaterialTheme.colorScheme.primary
+        )
         
         Spacer(modifier = Modifier.height(40.dp))
 
-        // سائز کنٹرول
         Text(text = "Size: ${(sizeScale * 100).toInt()}%")
         Slider(
             value = sizeScale,
@@ -91,7 +105,6 @@ fun MainScreen(context: Context, onStartClick: () -> Unit) {
 
         Spacer(modifier = Modifier.height(20.dp))
 
-        // اوپیسٹی کنٹرول
         Text(text = "Opacity: ${(opacity * 100).toInt()}%")
         Slider(
             value = opacity,
@@ -111,7 +124,11 @@ fun MainScreen(context: Context, onStartClick: () -> Unit) {
             Text(text = "Launch / Update Clock")
         }
         
-        Spacer(modifier = Modifier.height(10.dp))
-        Text(text = "Tip: Drag to top to remove", style = MaterialTheme.typography.bodySmall)
+        Spacer(modifier = Modifier.height(16.dp))
+        Text(
+            text = "Tip: Drag capsule to the very top of the screen to remove it.",
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.secondary
+        )
     }
 }
