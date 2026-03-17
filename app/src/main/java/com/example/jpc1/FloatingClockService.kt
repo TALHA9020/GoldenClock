@@ -1,6 +1,5 @@
 package com.example.jpc1
 
-import android.app.Notification
 import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.app.Service
@@ -19,7 +18,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Text
 import androidx.compose.runtime.*
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.scale
@@ -42,9 +40,9 @@ class FloatingClockService : Service(), LifecycleOwner, ViewModelStoreOwner, Sav
     private lateinit var windowManager: WindowManager
     private var floatingView: ComposeView? = null
     private lateinit var params: WindowManager.LayoutParams
-
+    
     private val lifecycleRegistry = LifecycleRegistry(this)
-    private val store = ViewModelStore() // نام بدل دیا تاکہ سسٹم سے نہ ٹکرائے
+    private val store = ViewModelStore()
     private val savedStateRegistryController = SavedStateRegistryController.create(this)
 
     override val lifecycle: Lifecycle get() = lifecycleRegistry
@@ -56,11 +54,11 @@ class FloatingClockService : Service(), LifecycleOwner, ViewModelStoreOwner, Sav
         savedStateRegistryController.performRestore(null)
         lifecycleRegistry.handleLifecycleEvent(Lifecycle.Event.ON_CREATE)
         lifecycleRegistry.handleLifecycleEvent(Lifecycle.Event.ON_START)
-
+        
         windowManager = getSystemService(Context.WINDOW_SERVICE) as WindowManager
         
-        startForegroundService()
-        showFloatingClock()
+        // اینڈرائیڈ 15 کے لیے پہلے نوٹیفکیشن بنانا ضروری ہے
+        startMyForeground()
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
@@ -68,26 +66,27 @@ class FloatingClockService : Service(), LifecycleOwner, ViewModelStoreOwner, Sav
         return START_STICKY
     }
 
-    private fun startForegroundService() {
+    private fun startMyForeground() {
         val channelId = "floating_clock_channel"
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            val channel = NotificationChannel(channelId, "Golden Floating Clock Service", NotificationManager.IMPORTANCE_LOW)
-            (getSystemService(NotificationManager::class.java)).createNotificationChannel(channel)
+            val channel = NotificationChannel(channelId, "Golden Clock", NotificationManager.IMPORTANCE_LOW)
+            val manager = getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+            manager.createNotificationChannel(channel)
         }
-
+        
         val notification = NotificationCompat.Builder(this, channelId)
-            .setContentTitle("Golden Floating Clock")
-            .setContentText("Clock is active")
+            .setContentTitle("Golden Clock Active")
+            .setContentText("گھڑی سکرین پر موجود ہے")
             .setSmallIcon(android.R.drawable.ic_menu_mylocation)
-            .setPriority(NotificationCompat.PRIORITY_LOW)
+            .setOngoing(true)
             .build()
 
         startForeground(1, notification)
     }
 
     private fun showFloatingClock() {
-        floatingView?.let { 
-            if (it.isAttachedToWindow) windowManager.removeView(it) 
+        if (floatingView != null) {
+            try { windowManager.removeView(floatingView) } catch (e: Exception) {}
         }
 
         val prefs = getSharedPreferences("clock_prefs", Context.MODE_PRIVATE)
@@ -107,16 +106,19 @@ class FloatingClockService : Service(), LifecycleOwner, ViewModelStoreOwner, Sav
         }
 
         floatingView = ComposeView(this).apply {
+            // یہ 3 لائنیں اینڈرائیڈ 15 میں Compose کریش روکنے کے لیے لازمی ہیں
+            setViewTreeLifecycleOwner(this@FloatingClockService)
+            setViewTreeViewModelStoreOwner(this@FloatingClockService)
+            setViewTreeSavedStateRegistryOwner(this@FloatingClockService)
+
             setContent {
                 var currentTime by remember { mutableStateOf(getCurrentTime()) }
-
                 LaunchedEffect(Unit) {
                     while(true) {
                         currentTime = getCurrentTime()
                         kotlinx.coroutines.delay(1000)
                     }
                 }
-
                 Box(
                     modifier = Modifier
                         .scale(sizeScale)
@@ -161,9 +163,7 @@ class FloatingClockService : Service(), LifecycleOwner, ViewModelStoreOwner, Sav
                         return true
                     }
                     MotionEvent.ACTION_UP -> {
-                        if (params.y < 50) {
-                            stopSelf()
-                        }
+                        if (params.y < 50) stopSelf()
                         return true
                     }
                 }
@@ -181,10 +181,8 @@ class FloatingClockService : Service(), LifecycleOwner, ViewModelStoreOwner, Sav
     override fun onBind(intent: Intent?): IBinder? = null
 
     override fun onDestroy() {
-        super.onDestroy()
         lifecycleRegistry.handleLifecycleEvent(Lifecycle.Event.ON_DESTROY)
-        floatingView?.let { 
-            if (it.isAttachedToWindow) windowManager.removeView(it) 
-        }
+        floatingView?.let { if (it.isAttachedToWindow) windowManager.removeView(it) }
+        super.onDestroy()
     }
 }
