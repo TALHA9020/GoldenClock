@@ -44,11 +44,11 @@ class FloatingClockService : Service(), LifecycleOwner, ViewModelStoreOwner, Sav
     private lateinit var params: WindowManager.LayoutParams
 
     private val lifecycleRegistry = LifecycleRegistry(this)
-    private val viewModelStore = ViewModelStore()
+    private val store = ViewModelStore() // نام بدل دیا تاکہ سسٹم سے نہ ٹکرائے
     private val savedStateRegistryController = SavedStateRegistryController.create(this)
 
     override val lifecycle: Lifecycle get() = lifecycleRegistry
-    override val viewModelStore: ViewModelStore get() = viewModelStore
+    override val viewModelStore: ViewModelStore get() = store
     override val savedStateRegistry: SavedStateRegistry get() = savedStateRegistryController.savedStateRegistry
 
     override fun onCreate() {
@@ -77,8 +77,9 @@ class FloatingClockService : Service(), LifecycleOwner, ViewModelStoreOwner, Sav
 
         val notification = NotificationCompat.Builder(this, channelId)
             .setContentTitle("Golden Floating Clock")
-            .setContentText("The clock is currently active on your screen.")
+            .setContentText("Clock is active")
             .setSmallIcon(android.R.drawable.ic_menu_mylocation)
+            .setPriority(NotificationCompat.PRIORITY_LOW)
             .build()
 
         startForeground(1, notification)
