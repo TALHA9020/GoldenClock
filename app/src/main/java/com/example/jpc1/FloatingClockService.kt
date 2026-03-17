@@ -64,7 +64,6 @@ class FloatingClockService : Service(), LifecycleOwner, ViewModelStoreOwner, Sav
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
-        // اگر سروس پہلے سے چل رہی ہے اور یوزر دوبارہ "Update" بٹن دباتا ہے، تو UI ریفریش ہو جائے گی
         showFloatingClock()
         return START_STICKY
     }
@@ -72,12 +71,13 @@ class FloatingClockService : Service(), LifecycleOwner, ViewModelStoreOwner, Sav
     private fun startForegroundService() {
         val channelId = "floating_clock_channel"
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            val channel = NotificationChannel(channelId, "Floating Clock Service", NotificationManager.IMPORTANCE_LOW)
+            val channel = NotificationChannel(channelId, "Golden Floating Clock Service", NotificationManager.IMPORTANCE_LOW)
             (getSystemService(NotificationManager::class.java)).createNotificationChannel(channel)
         }
 
         val notification = NotificationCompat.Builder(this, channelId)
-            .setContentTitle("Golden Clock Running")
+            .setContentTitle("Golden Floating Clock")
+            .setContentText("The clock is currently active on your screen.")
             .setSmallIcon(android.R.drawable.ic_menu_mylocation)
             .build()
 
@@ -85,12 +85,10 @@ class FloatingClockService : Service(), LifecycleOwner, ViewModelStoreOwner, Sav
     }
 
     private fun showFloatingClock() {
-        // اگر پہلے سے کلاک موجود ہے تو اسے ہٹائیں تاکہ نئی سیٹنگز کے ساتھ دوبارہ لوڈ ہو سکے
         floatingView?.let { 
             if (it.isAttachedToWindow) windowManager.removeView(it) 
         }
 
-        // سیٹنگز پڑھنا
         val prefs = getSharedPreferences("clock_prefs", Context.MODE_PRIVATE)
         val sizeScale = prefs.getFloat("size_scale", 1f)
         val currentOpacity = prefs.getFloat("opacity", 1f)
@@ -120,8 +118,8 @@ class FloatingClockService : Service(), LifecycleOwner, ViewModelStoreOwner, Sav
 
                 Box(
                     modifier = Modifier
-                        .scale(sizeScale) // سائز اپلائی کرنا
-                        .alpha(currentOpacity) // شفافیت اپلائی کرنا
+                        .scale(sizeScale)
+                        .alpha(currentOpacity)
                         .background(
                             brush = Brush.verticalGradient(
                                 colors = listOf(Color(0xFFFFD700), Color(0xFFB8860B))
@@ -140,7 +138,6 @@ class FloatingClockService : Service(), LifecycleOwner, ViewModelStoreOwner, Sav
             }
         }
 
-        // ڈریگنگ اور ریمو لاجک
         floatingView?.setOnTouchListener(object : View.OnTouchListener {
             private var initialX: Int = 0
             private var initialY: Int = 0
@@ -163,7 +160,6 @@ class FloatingClockService : Service(), LifecycleOwner, ViewModelStoreOwner, Sav
                         return true
                     }
                     MotionEvent.ACTION_UP -> {
-                        // ریمو لاجک: اگر اسکرین کے بالکل ٹاپ پر لے جائیں
                         if (params.y < 50) {
                             stopSelf()
                         }
