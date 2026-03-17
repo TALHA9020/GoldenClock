@@ -32,6 +32,8 @@ import androidx.lifecycle.*
 import androidx.savedstate.SavedStateRegistry
 import androidx.savedstate.SavedStateRegistryController
 import androidx.savedstate.SavedStateRegistryOwner
+import androidx.savedstate.setViewTreeSavedStateRegistryOwner
+import androidx.lifecycle.viewmodel.compose.LocalViewModelStoreOwner
 import java.text.SimpleDateFormat
 import java.util.*
 
@@ -56,8 +58,6 @@ class FloatingClockService : Service(), LifecycleOwner, ViewModelStoreOwner, Sav
         lifecycleRegistry.handleLifecycleEvent(Lifecycle.Event.ON_START)
         
         windowManager = getSystemService(Context.WINDOW_SERVICE) as WindowManager
-        
-        // اینڈرائیڈ 15 کے لیے پہلے نوٹیفکیشن بنانا ضروری ہے
         startMyForeground()
     }
 
@@ -106,7 +106,6 @@ class FloatingClockService : Service(), LifecycleOwner, ViewModelStoreOwner, Sav
         }
 
         floatingView = ComposeView(this).apply {
-            // یہ 3 لائنیں اینڈرائیڈ 15 میں Compose کریش روکنے کے لیے لازمی ہیں
             setViewTreeLifecycleOwner(this@FloatingClockService)
             setViewTreeViewModelStoreOwner(this@FloatingClockService)
             setViewTreeSavedStateRegistryOwner(this@FloatingClockService)
