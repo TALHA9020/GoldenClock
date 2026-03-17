@@ -1,5 +1,6 @@
 package com.example.jpc1
 
+import android.content.Context
 import android.content.Intent
 import android.net.Uri
 import android.os.Build
@@ -8,11 +9,8 @@ import android.provider.Settings
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.layout.*
-import androidx.compose.material3.Button
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Surface
-import androidx.compose.material3.Text
-import androidx.compose.runtime.Composable
+import androidx.compose.material3.*
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
@@ -27,6 +25,7 @@ class MainActivity : ComponentActivity() {
                     color = MaterialTheme.colorScheme.background
                 ) {
                     MainScreen(
+                        context = this,
                         onStartClick = { checkAndStartService() }
                     )
                 }
@@ -37,14 +36,12 @@ class MainActivity : ComponentActivity() {
     private fun checkAndStartService() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
             if (!Settings.canDrawOverlays(this)) {
-                // اگر اجازت نہیں ہے تو سیٹنگز پیج کھولیں
                 val intent = Intent(
                     Settings.ACTION_MANAGE_OVERLAY_PERMISSION,
                     Uri.parse("package:$packageName")
                 )
                 startActivityForResult(intent, 1001)
             } else {
-                // اگر اجازت موجود ہے تو سروس شروع کریں
                 startFloatingService()
             }
         } else {
@@ -60,31 +57,61 @@ class MainActivity : ComponentActivity() {
             startService(intent)
         }
     }
-
-    @Deprecated("Deprecated in Java")
-    override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
-        super.onActivityResult(requestCode, resultCode, data)
-        if (requestCode == 1001) {
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
-                if (Settings.canDrawOverlays(this)) {
-                    startFloatingService()
-                }
-            }
-        }
-    }
 }
 
 @Composable
-fun MainScreen(onStartClick: () -> Unit) {
+fun MainScreen(context: Context, onStartClick: () -> Unit) {
+    val prefs = context.getSharedPreferences("clock_prefs", Context.MODE_PRIVATE)
+    
+    // سائز اور اوپیسٹی کی اسٹیٹ (لوکل اور پریفرنسز میں محفوظ)
+    var sizeScale by remember { mutableFloatStateOf(prefs.getFloat("size_scale", 1f)) }
+    var opacity by remember { mutableFloatStateOf(prefs.getFloat("opacity", 1f)) }
+
     Column(
-        modifier = Modifier.fillMaxSize(),
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(24.dp),
         verticalArrangement = Arrangement.Center,
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
-        Text(text = "Golden Floating Clock", style = MaterialTheme.typography.headlineMedium)
+        Text(text = "Golden Clock Settings", style = MaterialTheme.typography.headlineMedium)
+        
+        Spacer(modifier = Modifier.height(40.dp))
+
+        // سائز کنٹرول
+        Text(text = "Size: ${(sizeScale * 100).toInt()}%")
+        Slider(
+            value = sizeScale,
+            onValueChange = { 
+                sizeScale = it
+                prefs.edit().putFloat("size_scale", it).apply()
+            },
+            valueRange = 0.5f..2.0f
+        )
+
         Spacer(modifier = Modifier.height(20.dp))
-        Button(onClick = onStartClick) {
-            Text(text = "Start Floating Clock")
+
+        // اوپیسٹی کنٹرول
+        Text(text = "Opacity: ${(opacity * 100).toInt()}%")
+        Slider(
+            value = opacity,
+            onValueChange = { 
+                opacity = it
+                prefs.edit().putFloat("opacity", it).apply()
+            },
+            valueRange = 0.2f..1.0f
+        )
+
+        Spacer(modifier = Modifier.height(40.dp))
+
+        Button(
+            onClick = onStartClick,
+            modifier = Modifier.fillMaxWidth().height(56.dp)
+        ) {
+            Text(text = "Launch / Update Clock")
         }
+        
+        Spacer(modifier = Modifier.height(10.dp))
+        Text(text = "Tip: Drag to top to remove", style = MaterialTheme.typography.bodySmall)
     }
 }
